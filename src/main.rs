@@ -108,43 +108,23 @@ fn main() -> anyhow::Result<()> {
 
         let x_lim = local_dm_min..local_dm_max;
         let y_lim = local_time_min..local_time_max;
-        let z_lim = 0.0..8.0;
 
         let mut ctx = ChartBuilder::on(&root)
-            .set_label_area_size(LabelAreaPosition::Left, 40) // Put in some margins
+            .set_label_area_size(LabelAreaPosition::Left, 40)
             .set_label_area_size(LabelAreaPosition::Right, 40)
             .set_label_area_size(LabelAreaPosition::Bottom, 40)
-            .caption("Clustering", ("sans-serif", 25)) // Set a caption and font
-            .build_cartesian_3d(x_lim, y_lim, z_lim)
+            .caption("Candidates", ("sans-serif", 25))
+            .build_cartesian_2d(x_lim, y_lim)
             .expect("Couldn't build our ChartBuilder");
 
-        ctx.with_projection(|mut pb| {
-            pb.yaw = 0.5;
-            pb.scale = 0.9;
-            pb.into_matrix()
-        });
-
-        ctx.configure_axes()
-            .light_grid_style(BLACK.mix(0.15))
-            .max_light_lines(3)
+        ctx.configure_mesh()
+            .disable_x_mesh()
+            .disable_y_mesh()
             .draw()?;
         let root_area = ctx.plotting_area();
 
-        // We're only going to plot the first two dims
-        for i in 0..cands.len() {
-            let cand = cands[i];
-            let point = (cand.dm, cand.mjds, (cand.box_n as f64).log2());
-
-            let point = match cluster_idxs[i] {
-                Some(0) => Circle::new(point, 3, ShapeStyle::from(&RED).filled()),
-                Some(1) => Circle::new(point, 3, ShapeStyle::from(&GREEN).filled()),
-                Some(2) => Circle::new(point, 3, ShapeStyle::from(&BLUE).filled()),
-                _ => Circle::new(point, 3, ShapeStyle::from(&BLACK).filled()),
-            };
-
-            root_area
-                .draw(&point)
-                .expect("An error occurred while drawing the point!");
+        for cand in cands.iter() {
+            root_area.draw_pixel((cand.dm, cand.mjds), &HSLColor(cand.snr, 1.0, 0.5))?;
         }
 
         dbg!(filtered);
