@@ -340,6 +340,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7bad48618fdb549078c333a7a8528acb57af271d0433bdecd523eb620628364e"
 
 [[package]]
+name = "float-ord"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ce81f49ae8a0482e4c55ea62ebbd7e5a686af544c00b9d090bba3ff9be97b3d"
+
+[[package]]
 name = "font-kit"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -352,7 +358,7 @@ dependencies = [
  "core-text",
  "dirs-next",
  "dwrote",
- "float-ord",
+ "float-ord 0.2.0",
  "freetype",
  "lazy_static",
  "libc",
@@ -426,6 +432,7 @@ name = "grex_t2"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "float-ord 0.3.2",
  "linfa",
  "linfa-clustering",
  "ndarray",

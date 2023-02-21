@@ -1,3 +1,4 @@
+use float_ord::FloatOrd;
 use linfa::traits::*;
 use linfa_clustering::Dbscan;
 use ndarray::prelude::*;
@@ -94,8 +95,14 @@ fn main() -> anyhow::Result<()> {
         let root = BitMapBackend::new(&filename, (600, 400)).into_drawing_area();
         root.fill(&WHITE).unwrap();
 
-        let x_lim = min_dm..max_dm;
-        let y_lim = 0.0..1000.0;
+        let local_dm_min = cands.iter().map(|x| FloatOrd(x.dm)).min().unwrap().0;
+        let local_dm_max = cands.iter().map(|x| FloatOrd(x.dm)).max().unwrap().0;
+
+        let local_time_min = cands.iter().map(|x| FloatOrd(x.mjds)).min().unwrap().0;
+        let local_time_max = cands.iter().map(|x| FloatOrd(x.mjds)).max().unwrap().0;
+
+        let x_lim = local_dm_min..local_dm_max;
+        let y_lim = local_time_min..local_time_max;
 
         let mut ctx = ChartBuilder::on(&root)
             .set_label_area_size(LabelAreaPosition::Left, 40) // Put in some margins
