@@ -88,6 +88,7 @@ fn main() -> anyhow::Result<()> {
             .filter(|cand| cand.snr > min_snr)
             .filter(|cand| cand.dm > min_dm && cand.dm < max_dm)
             .collect();
+
         // Plot the clusters
         let filename = format!("target/{count}.png");
         let root = BitMapBackend::new(&filename, (600, 400)).into_drawing_area();
@@ -108,20 +109,15 @@ fn main() -> anyhow::Result<()> {
         let root_area = ctx.plotting_area();
 
         // We're only going to plot the first two dims
-        for i in 0..cluster_points.shape()[0] {
+        for i in 0..cands.len() {
             let cand = cands[i];
+            let point = (cand.dm, cand.mjds);
 
             let point = match cluster_idxs[i] {
-                Some(0) => Circle::new((cand.dm, cand.mjds), 3, ShapeStyle::from(&RED).filled()),
-                Some(1) => Circle::new((cand.dm, cand.mjds), 3, ShapeStyle::from(&GREEN).filled()),
-                Some(2) => Circle::new((cand.dm, cand.mjds), 3, ShapeStyle::from(&BLUE).filled()),
-                // Making sure our pattern-matching is exhaustive
-                // Note that we can define a custom color using RGB
-                _ => Circle::new(
-                    (cand.dm, cand.mjds),
-                    3,
-                    ShapeStyle::from(&RGBColor(255, 255, 255)).filled(),
-                ),
+                Some(0) => Circle::new(point, 3, ShapeStyle::from(&RED).filled()),
+                Some(1) => Circle::new(point, 3, ShapeStyle::from(&GREEN).filled()),
+                Some(2) => Circle::new(point, 3, ShapeStyle::from(&BLUE).filled()),
+                _ => Circle::new(point, 3, ShapeStyle::from(&BLACK).filled()),
             };
 
             root_area
