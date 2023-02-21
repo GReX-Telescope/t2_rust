@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
     let min_snr = 20.0;
 
     let mut count = 0;
-    let glup = 16384;
+    let gulp = 16384;
 
     loop {
         let mut cands = Vec::new();
