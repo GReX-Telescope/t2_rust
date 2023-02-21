@@ -54,10 +54,11 @@ fn main() -> anyhow::Result<()> {
     let min_snr = 20.0;
 
     let mut count = 0;
+    let glup = 16384;
 
     loop {
         let mut cands = Vec::new();
-        while cands.len() < 1024 {
+        while cands.len() < gulp {
             let (n, _) = socket.recv_from(&mut buf)?;
             let cand = Candidate::from_str(std::str::from_utf8(&buf[..n]).unwrap());
             cands.push(cand)
