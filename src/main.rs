@@ -68,6 +68,10 @@ fn main() -> anyhow::Result<()> {
         }
         println!("Clustering glup of size - {}", cands.len());
 
+        if cands.is_empty() {
+            continue;
+        }
+
         // Cluster (get idxs)
         let mut clusters: HashMap<usize, Candidate> = HashMap::new();
         let cluster_points = cluster_params(&cands);
