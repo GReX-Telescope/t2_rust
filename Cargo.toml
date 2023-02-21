@@ -1,0 +1,9 @@
+[package]
+name = "grex_t2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+linfa = "0.6.1"
+linfa-clustering = "0.6.1"
+ndarray = "0.15.6"
