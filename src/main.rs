@@ -130,10 +130,12 @@ fn main() -> anyhow::Result<()> {
         let root_area = ctx.plotting_area();
 
         for cand in cands.iter() {
-            root_area.draw_pixel(
-                (cand.dm, cand.mjds),
-                &HSLColor(cand.snr / local_snr_max, 1.0, 0.5),
-            )?;
+            if cand.snr > min_snr {
+                root_area.draw_pixel(
+                    (cand.dm, cand.mjds),
+                    &HSLColor(cand.snr / local_snr_max, 1.0, 0.5),
+                )?;
+            }
         }
 
         dbg!(filtered);
