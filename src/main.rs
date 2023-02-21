@@ -110,6 +110,8 @@ fn main() -> anyhow::Result<()> {
         let local_time_min = cands.iter().map(|x| FloatOrd(x.mjds)).min().unwrap().0;
         let local_time_max = cands.iter().map(|x| FloatOrd(x.mjds)).max().unwrap().0;
 
+        let local_snr_max = cands.iter().map(|x| FloatOrd(x.snr)).max().unwrap().0;
+
         let x_lim = local_dm_min..local_dm_max;
         let y_lim = local_time_min..local_time_max;
 
@@ -128,7 +130,10 @@ fn main() -> anyhow::Result<()> {
         let root_area = ctx.plotting_area();
 
         for cand in cands.iter() {
-            root_area.draw_pixel((cand.dm, cand.mjds), &HSLColor(cand.snr, 1.0, 0.5))?;
+            root_area.draw_pixel(
+                (cand.dm, cand.mjds),
+                &HSLColor(cand.snr / local_snr_max, 1.0, 0.5),
+            )?;
         }
 
         dbg!(filtered);
