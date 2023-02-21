@@ -38,7 +38,7 @@ fn cluster_params(cands: &[Candidate]) -> Array2<f64> {
             .push_row(ArrayView::from(&[
                 cand.time_n as f64,
                 cand.dm_n as f64,
-                cand.box_n as f64,
+                (cand.box_n as f64).log2(),
             ]))
             .unwrap();
     }
