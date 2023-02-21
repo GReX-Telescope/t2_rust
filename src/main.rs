@@ -54,15 +54,19 @@ fn main() -> anyhow::Result<()> {
     let min_snr = 20.0;
 
     let mut count = 0;
-    let gulp = 16384;
 
     loop {
         let mut cands = Vec::new();
-        while cands.len() < gulp {
+
+        loop {
             let (n, _) = socket.recv_from(&mut buf)?;
+            if (n == 1) && (buf[0] == 0x03) {
+                break;
+            }
             let cand = Candidate::from_str(std::str::from_utf8(&buf[..n]).unwrap());
             cands.push(cand)
         }
+        println!("Clustering glup of size - {}", cands.len());
 
         // Cluster (get idxs)
         let mut clusters: HashMap<usize, Candidate> = HashMap::new();
