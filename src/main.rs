@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
     let min_snr = 20.0;
 
     // Setup SQL connection to GReX database
-    let url = "postgres://postgres@localhost:5432/grex";
+    let url = "postgres://postgres:password@localhost:5432/grex";
     let pool = sqlx::postgres::PgPool::connect(url).await?;
 
     // Setup table
