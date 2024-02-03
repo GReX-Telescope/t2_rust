@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1"
+color-eyre = "0.6"
 float-ord = "0.3"
 linfa = "0.7"
 linfa-clustering = "0.7"
 ndarray = "0.15"
-plotters = "0.3"
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

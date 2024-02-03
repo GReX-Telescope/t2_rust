@@ -1,19 +1,21 @@
-use float_ord::FloatOrd;
+use color_eyre::eyre::Result;
 use linfa::traits::*;
 use linfa_clustering::Dbscan;
 use ndarray::prelude::*;
-use plotters::prelude::*;
-use std::{collections::HashMap, net::UdpSocket};
+use std::collections::HashMap;
+use tokio::net::UdpSocket;
+use tracing::info;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[derive(Debug, Copy, Clone)]
 struct Candidate {
-    snr: f64,
-    _f_n: usize,
-    time_n: usize,
-    mjds: f64,
-    box_n: usize,
-    dm_n: usize,
-    dm: f64,
+    snr: f32,
+    _f_n: i32,
+    time_n: i32,
+    mjds: f32,
+    box_n: i32,
+    dm_n: i32,
+    dm: f32,
 }
 
 impl Candidate {
@@ -29,8 +31,21 @@ impl Candidate {
             dm: splits[6].parse().unwrap(),
         }
     }
+
+    async fn insert(&self, pool: &sqlx::PgPool) -> Result<()> {
+        let query = "INSERT INTO t2_cands (mjds, snr, ibox, dm) VALUES ($1, $2, $3, $4)";
+        sqlx::query(query)
+            .bind(self.mjds)
+            .bind(self.snr)
+            .bind(self.box_n)
+            .bind(self.dm)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
 }
 
+/// Cluster candidates in time, dm, box width space
 fn cluster_params(cands: &[Candidate]) -> Array2<f64> {
     let mut params = Array::zeros((0, 3));
     for cand in cands {
@@ -45,28 +60,45 @@ fn cluster_params(cands: &[Candidate]) -> Array2<f64> {
     params
 }
 
-fn main() -> anyhow::Result<()> {
-    let socket = UdpSocket::bind("127.0.0.1:12345")?;
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Setup logging
+    color_eyre::install()?;
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
+
+    // Create the socket to receive candidates from heimdall
+    let socket = UdpSocket::bind("127.0.0.1:12345").await?;
 
     let mut buf = [0; 512];
+
+    // Filter params
+    // TODO - make these launch args
     let min_dm = 20.0;
     let max_dm = 100.0;
     let min_snr = 20.0;
 
-    let mut count = 0;
+    // Setup SQL connection to GReX database
+    let url = "postgres://postgres@localhost:5432/grex";
+    let pool = sqlx::postgres::PgPool::connect(url).await?;
+
+    // Setup table
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let mut cands = Vec::new();
 
     loop {
-        let mut cands = Vec::new();
-
         loop {
-            let (n, _) = socket.recv_from(&mut buf)?;
+            let (n, _) = socket.recv_from(&mut buf).await?;
             if (n == 1) && (buf[0] == 0x03) {
                 break;
             }
             let cand = Candidate::from_str(std::str::from_utf8(&buf[..n]).unwrap());
             cands.push(cand)
         }
-        println!("Clustering glup of size - {}", cands.len());
+        info!("Clustering glup of size - {}", cands.len());
 
         if cands.is_empty() {
             continue;
@@ -99,47 +131,11 @@ fn main() -> anyhow::Result<()> {
             .filter(|cand| cand.dm > min_dm && cand.dm < max_dm)
             .collect();
 
-        // Plot the clusters
-        let filename = format!("target/{count}.png");
-        let root = BitMapBackend::new(&filename, (600, 400)).into_drawing_area();
-        root.fill(&WHITE).unwrap();
-
-        let local_dm_min = cands.iter().map(|x| FloatOrd(x.dm)).min().unwrap().0;
-        let local_dm_max = cands.iter().map(|x| FloatOrd(x.dm)).max().unwrap().0;
-
-        let local_time_min = cands.iter().map(|x| FloatOrd(x.mjds)).min().unwrap().0;
-        let local_time_max = cands.iter().map(|x| FloatOrd(x.mjds)).max().unwrap().0;
-
-        let local_snr_max = cands.iter().map(|x| FloatOrd(x.snr)).max().unwrap().0;
-
-        let x_lim = local_dm_min..local_dm_max;
-        let y_lim = local_time_min..local_time_max;
-
-        let mut ctx = ChartBuilder::on(&root)
-            .set_label_area_size(LabelAreaPosition::Left, 40)
-            .set_label_area_size(LabelAreaPosition::Right, 40)
-            .set_label_area_size(LabelAreaPosition::Bottom, 40)
-            .caption("Candidates", ("sans-serif", 25))
-            .build_cartesian_2d(x_lim, y_lim)
-            .expect("Couldn't build our ChartBuilder");
-
-        ctx.configure_mesh()
-            .disable_x_mesh()
-            .disable_y_mesh()
-            .draw()?;
-        let root_area = ctx.plotting_area();
-
-        for cand in cands.iter() {
-            if cand.snr > min_snr {
-                root_area.draw_pixel(
-                    (cand.dm, cand.mjds),
-                    &HSLColor(cand.snr / local_snr_max, 1.0, 0.5),
-                )?;
-            }
+        // Write the filtered, clustered candidates to the database
+        info!("Writting {} candidates to database", filtered.len());
+        for cand in filtered.iter() {
+            cand.insert(&pool).await?;
         }
-
-        dbg!(filtered);
         cands.clear();
-        count += 1;
     }
 }
