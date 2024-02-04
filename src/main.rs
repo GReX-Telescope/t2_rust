@@ -1,3 +1,4 @@
+use clap::Parser;
 use color_eyre::eyre::Result;
 use linfa::traits::*;
 use linfa_clustering::Dbscan;
@@ -6,6 +7,8 @@ use std::collections::HashMap;
 use tokio::net::UdpSocket;
 use tracing::info;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
+mod cli;
 
 #[derive(Debug, Copy, Clone)]
 struct Candidate {
@@ -69,20 +72,16 @@ async fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
+    // Get the launch args
+    let args = cli::Args::parse();
+
     // Create the socket to receive candidates from heimdall
     let socket = UdpSocket::bind("127.0.0.1:12345").await?;
 
     let mut buf = [0; 512];
 
-    // Filter params
-    // TODO - make these launch args
-    let min_dm = 20.0;
-    let max_dm = 100.0;
-    let min_snr = 20.0;
-
     // Setup SQL connection to GReX database
-    let url = "postgres://postgres:password@localhost:5432/grex";
-    let pool = sqlx::postgres::PgPool::connect(url).await?;
+    let pool = sqlx::postgres::PgPool::connect(&args.url).await?;
 
     // Setup table
     sqlx::migrate!("./migrations").run(&pool).await?;
@@ -127,9 +126,14 @@ async fn main() -> Result<()> {
         // Now flatten the candidates and remove the ones we don't care about
         let filtered: Vec<_> = clusters
             .into_values()
-            .filter(|cand| cand.snr > min_snr)
-            .filter(|cand| cand.dm > min_dm && cand.dm < max_dm)
+            .filter(|cand| cand.snr > args.min_snr)
+            .filter(|cand| cand.dm > args.min_dm && cand.dm < args.max_dm)
             .collect();
+
+        if filtered.is_empty() {
+            cands.clear();
+            continue;
+        }
 
         // Write the filtered, clustered candidates to the database
         info!("Writting {} candidates to database", filtered.len());
